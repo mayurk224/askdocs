@@ -10,7 +10,6 @@ from langchain_classic.chains import RetrievalQA
 
 load_dotenv()
 
-# --- LLM Setup ---
 groq_api_key = os.getenv("GROQ_API_KEY")
 if not groq_api_key:
     raise ValueError("GROQ_API_KEY environment variable is required")
