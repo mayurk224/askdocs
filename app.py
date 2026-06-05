@@ -22,7 +22,7 @@ llm = ChatGroq(
 
 embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
-st.title("📄 Document Q&A Chatbot")
+st.title("AskDocs - Document Q&A Chatbot")
 
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
