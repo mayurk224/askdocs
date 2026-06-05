@@ -35,7 +35,7 @@ flowchart TD
 ```
 AskDocs/
 ├── app.py              # Main application code
-├── requirement.txt     # Project dependencies
+├── requirements.txt    # Project dependencies
 ├── document.pdf        # Example PDF document
 ├── .gitignore          # Git ignore rules
 └── README.md           # This file
@@ -124,7 +124,7 @@ GROQ_API_KEY=your_groq_api_key_here
 
 1. Install dependencies:
    ```powershell
-   pip install -r requirement.txt
+   pip install -r requirements.txt
    ```
 
 2. Set up your `.env` file with a valid Groq API key
