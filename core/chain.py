@@ -1,4 +1,5 @@
-from langchain_classic.chains import RetrievalQA
+from langchain_classic.chains import RetrievalQA, ConversationalRetrievalChain
+from langchain_classic.memory import ConversationBufferMemory
 from langchain_groq import ChatGroq
 from config.settings import GROQ_API_KEY, MODEL_NAME
 from langchain_core.prompts import PromptTemplate
@@ -9,18 +10,29 @@ def build_qa_chain(retriever):
         model_name=MODEL_NAME
     )
 
-    # Strict prompt - forces model to only use document context
+    # Memory stores conversation history
+    memory = ConversationBufferMemory(
+        memory_key="chat_history",
+        return_messages=True,
+        output_key="answer"
+    )
+
+    # Strict prompt
     prompt_template = """
-    You are a helpful assistant that answers questions strictly based on the provided document context.
+    You are a helpful assistant that answers questions strictly based on the provided document context and conversation history.
 
     Rules:
     - Only use information from the context below to answer
-    - If the answer is not found in the context, respond exactly with: "I could not find relevant information in the document to answer this question."
+    - Use the conversation history to understand follow-up questions
+    - If the answer is not in the context, respond exactly with: "I could not find relevant information in the document to answer this question."
     - Do not use your own knowledge or make up answers
     - Be concise and precise
 
     Context:
     {context}
+
+    Conversation History:
+    {chat_history}
 
     Question:
     {question}
@@ -30,12 +42,13 @@ def build_qa_chain(retriever):
 
     prompt = PromptTemplate(
         template=prompt_template,
-        input_variables=["context", "question"]
+        input_variables=["context", "chat_history", "question"]
     )
 
-    return RetrievalQA.from_chain_type(
+    return ConversationalRetrievalChain.from_llm(
         llm=llm,
         retriever=retriever,
+        memory=memory,
         return_source_documents=True,
-        chain_type_kwargs={"prompt": prompt} 
+        combine_docs_chain_kwargs={"prompt": prompt}
     )

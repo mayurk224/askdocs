@@ -8,12 +8,14 @@ from core.chain import build_qa_chain
 
 st.title("AskDocs - Document Q&A Chatbot")
 
+# Initialize session state
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
 if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = None
 
+# --- PDF Upload ---
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
 if uploaded_file is not None and st.session_state.qa_chain is None:
@@ -22,16 +24,21 @@ if uploaded_file is not None and st.session_state.qa_chain is None:
         tmp_path = tmp_file.name
 
     try:
-        chunks = load_and_chunk_pdf(tmp_path)
-        embeddings = get_embeddings()
-        retriever = build_vectorstore(chunks, embeddings)
-        st.session_state.qa_chain = build_qa_chain(retriever)
+        with st.spinner("Processing PDF..."):
+            chunks = load_and_chunk_pdf(tmp_path)
+            embeddings = get_embeddings()
+            retriever = build_vectorstore(chunks, embeddings)
+            st.session_state.qa_chain = build_qa_chain(retriever)
+
         st.success("PDF loaded. Ask your question below.")
     finally:
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
+# --- Chat Interface ---
 if st.session_state.qa_chain is not None:
+
+    # Display chat history
     for chat in st.session_state.chat_history:
         with st.chat_message("user"):
             st.write(chat["question"])
@@ -46,16 +53,17 @@ if st.session_state.qa_chain is not None:
                         st.caption(source["content"])
                         st.divider()
 
+    # Question input
     question = st.chat_input("Ask a question about your document...")
 
     if question:
         with st.spinner("Thinking..."):
-            response = st.session_state.qa_chain.invoke({"query": question})
+            response = st.session_state.qa_chain.invoke({"question": question})
 
-        answer = response["result"]
+        # ConversationalRetrievalChain returns "answer" not "result"
+        answer = response["answer"]
         source_documents = response["source_documents"]
 
-        # Check if answer is irrelevant
         no_answer_phrase = "I could not find relevant information in the document"
         is_unanswerable = no_answer_phrase in answer
 
@@ -79,7 +87,6 @@ if st.session_state.qa_chain is not None:
 
         with st.chat_message("assistant"):
             if is_unanswerable:
-                # Show clean warning instead of bad answer
                 st.warning("⚠️ I could not find relevant information in the document to answer this question.")
             else:
                 st.write(answer)

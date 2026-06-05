@@ -49,9 +49,10 @@ flowchart TD
     E -->|Split into chunks| F[HuggingFaceEmbeddings]
     F -->|Generate embeddings| G[FAISS Vector Store]
     A -->|3. Ask Question| H[Streamlit UI]
-    H --> I[RetrievalQA Chain]
+    H --> I[ConversationalRetrievalChain]
     G -->|Retrieve relevant chunks| I
-    I -->|Pass context + question| J[Groq LLM]
+    Memory[ConversationBufferMemory] -->|Provide chat history| I
+    I -->|Pass context + history + question| J[Groq LLM]
     J -->|Generate answer| K[Streamlit UI]
     K -->|Display answer + sources| A
 ```
@@ -97,6 +98,7 @@ Vector store and retriever setup:
 
 ### core/chain.py
 QA chain construction:
+- Uses ConversationalRetrievalChain with ConversationBufferMemory for chat history
 - Strict prompt template to ensure answers only come from document context
 - Returns source documents for citation
 - Handles unanswerable questions gracefully
@@ -219,26 +221,26 @@ retriever = build_vectorstore(chunks, embeddings)
 ---
 
 ### core.chain.build_qa_chain(retriever)
-Builds the RetrievalQA chain.
+Builds the ConversationalRetrievalChain chain with conversation memory.
 
 **Parameters:**
 - `retriever` (VectorStoreRetriever): Retriever from build_vectorstore
 
 **Returns:**
-- `RetrievalQA`: Configured QA chain that accepts {"query": "..."}
+- `ConversationalRetrievalChain`: Configured QA chain that accepts {"question": "..."} and maintains conversation history
 
 **Example:**
 ```python
 from core.chain import build_qa_chain
 qa_chain = build_qa_chain(retriever)
-response = qa_chain.invoke({"query": "What is this document about?"})
+response = qa_chain.invoke({"question": "What is this document about?"})
 ```
 
 **Response Format:**
 ```python
 {
-    "query": "What is this document about?",
-    "result": "This document discusses...",
+    "question": "What is this document about?",
+    "answer": "This document discusses...",
     "source_documents": [Document(...), Document(...)]
 }
 ```
