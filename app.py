@@ -4,7 +4,7 @@ import streamlit as st
 from core.loader import load_and_chunk_pdf, get_summary_text
 from core.embeddings import get_embeddings
 from core.vectorstore import build_vectorstore
-from core.chain import build_qa_chain
+from core.chain import build_qa_chain, summarize_document
 
 st.title("AskDocs - Document Q&A Chatbot")
 
@@ -25,11 +25,12 @@ if "summary" not in st.session_state:
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
 if uploaded_file is not None and st.session_state.qa_chain is None:
-    with open("temp.pdf", "wb") as f:
-        f.write(uploaded_file.read())
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+        temp_file.write(uploaded_file.read())
+        temp_file_path = temp_file.name
 
     with st.spinner("Processing PDF..."):
-        chunks = load_and_chunk_pdf("temp.pdf")
+        chunks = load_and_chunk_pdf(temp_file_path)
         st.session_state.chunks = chunks
         embeddings = get_embeddings()
         retriever = build_vectorstore(chunks, embeddings)
@@ -42,7 +43,8 @@ if st.session_state.chunks is not None:
     if st.button("📋 Summarize Document"):
         if st.session_state.summary is None:
             with st.spinner("Summarizing document..."):
-                st.session_state.summary = get_summary_text(st.session_state.chunks)
+                combined_text = get_summary_text(st.session_state.chunks)
+                st.session_state.summary = summarize_document(combined_text)
 
     if st.session_state.summary is not None:
         with st.expander("📋 Document Summary", expanded=True):
