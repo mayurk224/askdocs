@@ -1,62 +1,90 @@
 import os
-from dotenv import load_dotenv
+import tempfile
 import streamlit as st
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from langchain_groq import ChatGroq
-from langchain_classic.chains import RetrievalQA
-
-load_dotenv()
-
-groq_api_key = os.getenv("GROQ_API_KEY")
-if not groq_api_key:
-    raise ValueError("GROQ_API_KEY environment variable is required")
-
-llm = ChatGroq(
-    groq_api_key=groq_api_key,
-    model_name="llama-3.1-8b-instant"
-)
-
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+from core.loader import load_and_chunk_pdf
+from core.embeddings import get_embeddings
+from core.vectorstore import build_vectorstore
+from core.chain import build_qa_chain
 
 st.title("AskDocs - Document Q&A Chatbot")
 
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+if "qa_chain" not in st.session_state:
+    st.session_state.qa_chain = None
+
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
-if uploaded_file is not None:
-    with open("temp.pdf", "wb") as f:
-        f.write(uploaded_file.read())
+if uploaded_file is not None and st.session_state.qa_chain is None:
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
+        tmp_file.write(uploaded_file.read())
+        tmp_path = tmp_file.name
 
     try:
-        loader = PyPDFLoader("temp.pdf")
-        documents = loader.load()
+        chunks = load_and_chunk_pdf(tmp_path)
+        embeddings = get_embeddings()
+        retriever = build_vectorstore(chunks, embeddings)
+        st.session_state.qa_chain = build_qa_chain(retriever)
+        st.success("PDF loaded. Ask your question below.")
     finally:
-        if os.path.exists("temp.pdf"):
-            os.unlink("temp.pdf")
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=50
-    )
-    chunks = splitter.split_documents(documents)
+if st.session_state.qa_chain is not None:
+    for chat in st.session_state.chat_history:
+        with st.chat_message("user"):
+            st.write(chat["question"])
+        with st.chat_message("assistant"):
+            if chat.get("is_unanswerable"):
+                st.warning("⚠️ I could not find relevant information in the document to answer this question.")
+            else:
+                st.write(chat["answer"])
+                with st.expander("📄 View Sources"):
+                    for i, source in enumerate(chat["sources"]):
+                        st.markdown(f"**Source {i+1} — Page {source['page']}**")
+                        st.caption(source["content"])
+                        st.divider()
 
-    vectorstore = FAISS.from_documents(chunks, embeddings)
-    retriever = vectorstore.as_retriever()
-
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        retriever=retriever
-    )
-
-    st.success("PDF loaded. Ask your question below.")
-
-    question = st.text_input("Ask a question about your document:")
+    question = st.chat_input("Ask a question about your document...")
 
     if question:
         with st.spinner("Thinking..."):
-            result = qa_chain.invoke(question)
-            answer = result["result"]
-        st.write("### Answer")
-        st.write(answer)
+            response = st.session_state.qa_chain.invoke({"query": question})
+
+        answer = response["result"]
+        source_documents = response["source_documents"]
+
+        # Check if answer is irrelevant
+        no_answer_phrase = "I could not find relevant information in the document"
+        is_unanswerable = no_answer_phrase in answer
+
+        sources = [
+            {
+                "page": doc.metadata.get("page", 0) + 1,
+                "content": doc.page_content
+            }
+            for doc in source_documents
+        ]
+
+        st.session_state.chat_history.append({
+            "question": question,
+            "answer": answer,
+            "sources": sources,
+            "is_unanswerable": is_unanswerable
+        })
+
+        with st.chat_message("user"):
+            st.write(question)
+
+        with st.chat_message("assistant"):
+            if is_unanswerable:
+                # Show clean warning instead of bad answer
+                st.warning("⚠️ I could not find relevant information in the document to answer this question.")
+            else:
+                st.write(answer)
+                with st.expander("📄 View Sources"):
+                    for i, source in enumerate(sources):
+                        st.markdown(f"**Source {i+1} — Page {source['page']}**")
+                        st.caption(source["content"])
+                        st.divider()
