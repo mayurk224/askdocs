@@ -10,14 +10,12 @@ def build_qa_chain(retriever):
         model_name=MODEL_NAME
     )
 
-    # Memory stores conversation history
     memory = ConversationBufferMemory(
         memory_key="chat_history",
         return_messages=True,
         output_key="answer"
     )
 
-    # Strict prompt
     prompt_template = """
     You are a helpful assistant that answers questions strictly based on the provided document context and conversation history.
 
@@ -52,3 +50,28 @@ def build_qa_chain(retriever):
         return_source_documents=True,
         combine_docs_chain_kwargs={"prompt": prompt}
     )
+
+# New function added
+def summarize_document(text):
+    llm = ChatGroq(
+        groq_api_key=GROQ_API_KEY,
+        model_name=MODEL_NAME
+    )
+
+    summary_prompt = f"""
+    You are a document summarization assistant.
+
+    Based on the following document content, provide a structured summary that includes:
+    - What this document is about (1-2 sentences)
+    - Main topics covered (bullet points)
+    - Key takeaways (bullet points)
+    - Who this document is useful for (1 sentence)
+
+    Document Content:
+    {text}
+
+    Summary:
+    """
+
+    response = llm.invoke(summary_prompt)
+    return response.content

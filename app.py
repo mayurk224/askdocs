@@ -1,7 +1,7 @@
 import os
 import tempfile
 import streamlit as st
-from core.loader import load_and_chunk_pdf
+from core.loader import load_and_chunk_pdf, get_summary_text
 from core.embeddings import get_embeddings
 from core.vectorstore import build_vectorstore
 from core.chain import build_qa_chain
@@ -15,30 +15,48 @@ if "chat_history" not in st.session_state:
 if "qa_chain" not in st.session_state:
     st.session_state.qa_chain = None
 
+if "chunks" not in st.session_state:
+    st.session_state.chunks = None
+
+if "summary" not in st.session_state:
+    st.session_state.summary = None
+
 # --- PDF Upload ---
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
 
 if uploaded_file is not None and st.session_state.qa_chain is None:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        tmp_path = tmp_file.name
+    with open("temp.pdf", "wb") as f:
+        f.write(uploaded_file.read())
 
-    try:
-        with st.spinner("Processing PDF..."):
-            chunks = load_and_chunk_pdf(tmp_path)
-            embeddings = get_embeddings()
-            retriever = build_vectorstore(chunks, embeddings)
-            st.session_state.qa_chain = build_qa_chain(retriever)
+    with st.spinner("Processing PDF..."):
+        chunks = load_and_chunk_pdf("temp.pdf")
+        st.session_state.chunks = chunks
+        embeddings = get_embeddings()
+        retriever = build_vectorstore(chunks, embeddings)
+        st.session_state.qa_chain = build_qa_chain(retriever)
 
-        st.success("PDF loaded. Ask your question below.")
-    finally:
-        if os.path.exists(tmp_path):
-            os.unlink(tmp_path)
+    st.success("PDF loaded. Ask your question below.")
+
+# --- Summary Button ---
+if st.session_state.chunks is not None:
+    if st.button("📋 Summarize Document"):
+        if st.session_state.summary is None:
+            with st.spinner("Summarizing document..."):
+                st.session_state.summary = get_summary_text(st.session_state.chunks)
+
+    if st.session_state.summary is not None:
+        with st.expander("📋 Document Summary", expanded=True):
+            st.markdown(st.session_state.summary)
+            # Button to clear summary
+            if st.button("Clear Summary"):
+                st.session_state.summary = None
+                st.rerun()
+
+st.divider()
 
 # --- Chat Interface ---
 if st.session_state.qa_chain is not None:
 
-    # Display chat history
     for chat in st.session_state.chat_history:
         with st.chat_message("user"):
             st.write(chat["question"])
@@ -53,14 +71,12 @@ if st.session_state.qa_chain is not None:
                         st.caption(source["content"])
                         st.divider()
 
-    # Question input
     question = st.chat_input("Ask a question about your document...")
 
     if question:
         with st.spinner("Thinking..."):
             response = st.session_state.qa_chain.invoke({"question": question})
 
-        # ConversationalRetrievalChain returns "answer" not "result"
         answer = response["answer"]
         source_documents = response["source_documents"]
 

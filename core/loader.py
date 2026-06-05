@@ -11,3 +11,10 @@ def load_and_chunk_pdf(file_path):
         chunk_overlap=CHUNK_OVERLAP
     )
     return splitter.split_documents(documents)
+
+# New function added
+def get_summary_text(chunks, max_chunks=20):
+    # Take first 20 chunks — enough to summarize without hitting token limit
+    selected = chunks[:max_chunks]
+    combined_text = "\n\n".join([chunk.page_content for chunk in selected])
+    return combined_text

@@ -21,6 +21,7 @@ AskDocs is a lightweight, production-ready Retrieval-Augmented Generation (RAG) 
 | Semantic Search | Finds relevant document context using FAISS vector store |
 | AI-Powered Answers | Uses Groq's Llama 3.1 model for fast, intelligent responses |
 | Source Citations | Shows exactly which pages and sections answers come from |
+| Document Summarization | Quick document overview with one-click summary |
 | Chat History | Maintains conversation context across interactions |
 | Clean UI | Modern, user-friendly Streamlit interface |
 | Real-time Processing | Spinner indicator while AI processes your question |
@@ -86,6 +87,7 @@ Centralized configuration management:
 Responsible for document processing:
 - **PDF loading**: Uses PyPDFLoader to extract text
 - **Text splitting**: RecursiveCharacterTextSplitter (500 char chunks, 50 char overlap)
+- **Summary extraction**: get_summary_text() function extracts first N chunks for quick overview
 
 ### core/embeddings.py
 Embedding model initialization:
@@ -163,9 +165,10 @@ The application will start and automatically open in your default browser at `ht
 
 1. Upload a PDF document using the file uploader
 2. Wait for the "PDF loaded. Ask your question below." success message
-3. Type your question in the chat input box
-4. Wait for the AI to process and respond
-5. View the answer and click "📄 View Sources" to see citations
+3. **Optional**: Click "📋 Summarize Document" to get a quick overview of the document
+4. Type your question in the chat input box
+5. Wait for the AI to process and respond
+6. View the answer and click "📄 View Sources" to see citations
 
 ## API Documentation
 
@@ -184,6 +187,25 @@ Loads and chunks a PDF document.
 ```python
 from core.loader import load_and_chunk_pdf
 chunks = load_and_chunk_pdf("document.pdf")
+```
+
+---
+
+### core.loader.get_summary_text(chunks, max_chunks=20)
+Extracts combined text from first N chunks for document summary.
+
+**Parameters:**
+- `chunks` (List[Document]): Document chunks from load_and_chunk_pdf
+- `max_chunks` (int): Maximum number of chunks to use for summary (default: 20)
+
+**Returns:**
+- `str`: Combined text from selected chunks
+
+**Example:**
+```python
+from core.loader import load_and_chunk_pdf, get_summary_text
+chunks = load_and_chunk_pdf("document.pdf")
+summary_text = get_summary_text(chunks)
 ```
 
 ---
@@ -298,7 +320,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Version History
 
-### v1.0.0 (Latest)
+### v1.0.1 (Latest)
+
+**Bug Fixes:**
+- Fixed NameError: 'summarize_document' is not defined in app.py
+- Simplified summarization workflow to use get_summary_text directly
+
+### v1.0.0
 
 **Features:**
 - Initial release of AskDocs
@@ -306,6 +334,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Semantic search with FAISS
 - AI-powered answers using Groq Llama 3.1
 - Source citations
+- Document Summarization
 - Chat history
 - Clean Streamlit UI
 
