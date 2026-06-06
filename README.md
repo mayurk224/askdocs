@@ -267,6 +267,24 @@ response = qa_chain.invoke({"question": "What is this document about?"})
 }
 ```
 
+---
+
+### core.chain.summarize_document(text)
+Generates a structured summary of document text using the LLM.
+
+**Parameters:**
+- `text` (str): Document text to summarize
+
+**Returns:**
+- `str`: Structured summary of the document
+
+**Example:**
+```python
+from core.chain import summarize_document
+summary = summarize_document("This is a document about...")
+print(summary)
+```
+
 ## Contributing Guidelines
 
 We welcome contributions to AskDocs! Here's how you can help:
