@@ -1,6 +1,11 @@
 import os
+import sys
 import tempfile
 import streamlit as st
+
+# Add the current directory to sys.path to ensure module discovery
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from core.loader import load_and_chunk_pdf, get_summary_text
 from core.embeddings import get_embeddings
 from core.vectorstore import build_vectorstore
