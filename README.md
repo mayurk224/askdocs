@@ -285,57 +285,6 @@ summary = summarize_document("This is a document about...")
 print(summary)
 ```
 
-## Contributing Guidelines
-
-We welcome contributions to AskDocs! Here's how you can help:
-
-### Development Workflow
-
-1. **Fork the Repository**
-   - Create a personal fork of the project
-
-2. **Create a Feature Branch**
-   ```powershell
-   git checkout -b feature/amazing-feature
-   ```
-
-3. **Make Your Changes**
-   - Follow the existing code style
-   - Add comments where necessary
-   - Test your changes thoroughly
-
-4. **Commit Your Changes**
-   ```powershell
-   git commit -m "Add amazing feature"
-   ```
-
-5. **Push to Your Branch**
-   ```powershell
-   git push origin feature/amazing-feature
-   ```
-
-6. **Open a Pull Request**
-   - Describe your changes in detail
-   - Link any relevant issues
-
-### Code Style Guidelines
-
-- Follow PEP 8 guidelines
-- Use meaningful variable and function names
-- Keep functions focused and single-purpose
-- Add docstrings for public functions
-
-### Code of Conduct
-
-- Be respectful and inclusive
-- Welcome constructive feedback
-- Focus on what's best for the community
-- Show empathy towards other contributors
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details (if LICENSE file doesn't exist, you may create one).
-
 ## Version History
 
 ### v1.0.1 (Latest)
